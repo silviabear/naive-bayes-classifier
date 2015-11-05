@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import math
+import sys
 
 TRAINING_IMAGES = "../data/trainingimages"
 TRAINING_LABELS = "../data/traininglabels"
@@ -67,17 +68,17 @@ def test(classifier, digit_occurences):
                 expected = int(label)
                 posterior = {}
                 for digit in range(10):
-                    posterior[digit] = digit_occurences[digit]
+                    posterior[digit] = math.log10(digit_occurences[digit])
                 for i in range(IMAGE_PIXEL):
                     row = image_fil.readline().strip("\n")
                     for j in range(IMAGE_PIXEL):
                         pixel = row[j]
                         for digit in range(10):
                             digit_prob = classifier[i][j][digit][pixel]
-                            posterior[digit] *= digit_prob
+                            posterior[digit] += math.log10(digit_prob)
 
                 max_posterior = 0
-                max_prob = 0
+                max_prob = -sys.maxsize
                 for digit in posterior:
                     if posterior[digit] > max_prob:
                         max_prob = posterior[digit]
