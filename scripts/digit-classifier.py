@@ -3,6 +3,7 @@
 import math
 import sys
 import time
+import gc
 
 TRAINING_IMAGES = "../data/trainingimages"
 TRAINING_LABELS = "../data/traininglabels"
@@ -322,24 +323,28 @@ if __name__ == "__main__":
     classification_rate, train_time, test_time = run_overlapping_group(2, 2)
     print("2*2")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
-    '''
+    gc.collect()
     classification_rate, train_time, test_time = run_overlapping_group(2, 4)
     print("2*4")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time)) 
+    gc.collect()
     classification_rate, train_time, test_time = run_overlapping_group(4, 2)
     print("4*2")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time)) 
+    gc.collect()
     classification_rate, train_time, test_time = run_overlapping_group(4, 4)
     print("4*4")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time)) 
+    gc.collect()
     classification_rate, train_time, test_time = run_overlapping_group(2, 3)
     print("2*3")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time)) 
+    gc.collect()
     classification_rate, train_time, test_time = run_overlapping_group(3, 2)
     print("3*2")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time)) 
+    gc.collect()
     classification_rate, train_time, test_time = run_overlapping_group(3, 3)
     print("3*3")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time)) 
-    '''
 
