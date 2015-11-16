@@ -131,10 +131,17 @@ def test(classifier, digit_occurences):
     print(correct * 1.0 / (correct + wrong))
     aggregate_classification_rate(classification_rate)
     
-    print(all_max_posterior)
-    print(all_min_posterior)
+    print_posterior(all_max_posterior, all_min_posterior)
     return classification_rate, confusion_matrix
 
+def print_posterior(max_posterior, min_posterior):
+    for i in range(10):
+        print("Digit " + str(i) + ":")
+        print("Max posterior probability: " + str(max_posterior[i][0]))
+        print("Happen at line: " + str(max_posterior[i][1]))
+        print("Min posterior probability: " + str(min_posterior[i][0]))
+        print("Happen at line: " + str(min_posterior[i][1]))
+    
 def aggregate_classification_rate(classification_rate):
     for digit in range(10):
         correct = classification_rate[digit][0]
@@ -178,7 +185,10 @@ def build_image_matrix(image_fil):
     for i in range(IMAGE_PIXEL):
         row = image_fil.readline().strip("\n")
         for j in range(IMAGE_PIXEL):
-            pixel_matrix[i][j] = row[j]
+            pixel = row[j]
+            if pixel == '+':
+                pixel = '#'
+            pixel_matrix[i][j] = pixel
 
     return pixel_matrix
 
@@ -312,12 +322,11 @@ def run_overlapping_group(m, n):
     return classification_rate, train_time, test_time
         
 if __name__ == "__main__":
-    
+    '''
     classifier, digit_occurences = train()
     classification_rate, confusion_matrix = test(classifier, digit_occurences)
     print classification_rate
     print_matrix(confusion_matrix)
-    '''
     classification_rate, train_time, test_time = run_disjoint_group(2, 2)
     print("2*2")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
@@ -344,7 +353,8 @@ if __name__ == "__main__":
     gc.collect()
     classification_rate, train_time, test_time = run_overlapping_group(4, 4)
     print("4*4")
-    print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time)) 
+    print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
+    '''
     gc.collect()
     classification_rate, train_time, test_time = run_overlapping_group(2, 3)
     print("2*3")
@@ -357,5 +367,4 @@ if __name__ == "__main__":
     classification_rate, train_time, test_time = run_overlapping_group(3, 3)
     print("3*3")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
-    '''
 
