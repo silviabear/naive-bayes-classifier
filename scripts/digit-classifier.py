@@ -13,7 +13,7 @@ TEST_LABELS = "../data/testlabels"
 
 IMAGE_PIXEL = 28
 
-PIXEL_VALUES = [' ', '+', '#']
+PIXEL_VALUES = [' ', '#']
 
 def train():
     classifier = [[{} for x in range(IMAGE_PIXEL)] for x in range(IMAGE_PIXEL)]
@@ -39,9 +39,12 @@ def train():
                     row = image_fil.readline().strip("\n")
                     assert(len(row) == IMAGE_PIXEL)
                     for j in range(IMAGE_PIXEL):
-                        classifier[i][j][int(label)][row[j]] += 1
+                        if row[j] != ' ':
+                            classifier[i][j][int(label)]['#'] += 1
+                        else:
+                            classifier[i][j][int(label)][' '] += 1
     
-    aggregate_classifier(classifier, digits_occurences, 1, 1, isOverlapping)
+    aggregate_classifier(classifier, digits_occurences, 1, 1, False)
     aggregate_digits_priors(digits_occurences)
     return classifier, digits_occurences
                         
@@ -78,6 +81,8 @@ def test(classifier, digit_occurences):
     confusion_matrix = [[0 for x in range(10)] for x in range(10)]
     classification_rate = [(0, 0) for x in range(10)]
     image_num = 0
+    correct = 0
+    wrong = 0
     all_max_posterior = [(-sys.maxsize, 0) for x in range(10)]
     all_min_posterior = [(sys.maxsize, 0) for x in range(10)]
     with open(TEST_IMAGES) as image_fil:
@@ -94,6 +99,8 @@ def test(classifier, digit_occurences):
                     row = image_fil.readline().strip("\n")
                     for j in range(IMAGE_PIXEL):
                         pixel = row[j]
+                        if pixel == '+':
+                            pixel = '#'
                         for digit in range(10):
                             digit_prob = classifier[i][j][digit][pixel]
                             posterior[digit] += math.log10(digit_prob)
@@ -110,7 +117,9 @@ def test(classifier, digit_occurences):
                     all_min_posterior[max_posterior] = (max_prob, image_num * 28)
                 if expected == max_posterior:
                     classification_rate[expected] = (classification_rate[expected][0] + 1, classification_rate[expected][1])
+                    correct += 1
                 else:
+                    wrong += 1
                     confusion_matrix[expected][max_posterior] += 1
                     classification_rate[expected] = (classification_rate[expected][0], classification_rate[expected][1] + 1)
                 image_num += 1
@@ -119,6 +128,7 @@ def test(classifier, digit_occurences):
         for column in range(10):
             confusion_matrix[row][column] /= 1.0 * total_images
 
+    print(correct * 1.0 / (correct + wrong))
     aggregate_classification_rate(classification_rate)
     
     print(all_max_posterior)
@@ -302,11 +312,12 @@ def run_overlapping_group(m, n):
     return classification_rate, train_time, test_time
         
 if __name__ == "__main__":
-    '''
+    
     classifier, digit_occurences = train()
     classification_rate, confusion_matrix = test(classifier, digit_occurences)
     print classification_rate
     print_matrix(confusion_matrix)
+    '''
     classification_rate, train_time, test_time = run_disjoint_group(2, 2)
     print("2*2")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
@@ -319,7 +330,6 @@ if __name__ == "__main__":
     classification_rate, train_time, test_time = run_disjoint_group(4, 4)
     print("4*4")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
-    '''
     classification_rate, train_time, test_time = run_overlapping_group(2, 2)
     print("2*2")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
@@ -346,5 +356,6 @@ if __name__ == "__main__":
     gc.collect()
     classification_rate, train_time, test_time = run_overlapping_group(3, 3)
     print("3*3")
-    print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time)) 
+    print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
+    '''
 
