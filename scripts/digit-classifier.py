@@ -5,25 +5,40 @@ import sys
 import time
 import gc
 
+#For digit classification
 TRAINING_IMAGES = "../data/trainingimages"
 TRAINING_LABELS = "../data/traininglabels"
 
 TEST_IMAGES = "../data/testimages"
 TEST_LABELS = "../data/testlabels"
 
-IMAGE_PIXEL = 28
+IMAGE_PIXEL_HEIGHT = 28
+IMAGE_PIXEL_WIDTH = 28
+NUM = 10
 
+'''
+#For face classification
+TRAINING_IMAGES = "../data/facedatatrain"
+TRAINING_LABELS = "../data/facedatatrainlabels"
+
+TEST_IMAGES = "../data/facedatatest"
+TEST_LABELS = "../data/facedatatestlabels"
+
+IMAGE_PIXEL_HEIGHT = 70
+IMAGE_PIXEL_WIDTH = 60
+NUM = 2
+'''
 PIXEL_VALUES = [' ', '#']
 
 def train():
-    classifier = [[{} for x in range(IMAGE_PIXEL)] for x in range(IMAGE_PIXEL)]
+    classifier = [[{} for x in range(IMAGE_PIXEL_WIDTH)] for x in range(IMAGE_PIXEL_HEIGHT)]
     digits_occurences = {}
-    for digit in range(10):
+    for digit in range(NUM):
         digits_occurences[digit] = 0
         
-    for i in range(IMAGE_PIXEL):
-        for j in range(IMAGE_PIXEL):
-            for digit in range(10):
+    for i in range(IMAGE_PIXEL_HEIGHT):
+        for j in range(IMAGE_PIXEL_WIDTH):
+            for digit in range(NUM):
                 classifier[i][j][digit] = {}
                 for pixel in PIXEL_VALUES:
                     classifier[i][j][digit][pixel] = 0
@@ -35,16 +50,20 @@ def train():
                 if len(label) == 0:
                     break
                 digits_occurences[int(label)] += 1                
-                for i in range(IMAGE_PIXEL):
+                for i in range(IMAGE_PIXEL_HEIGHT):
                     row = image_fil.readline().strip("\n")
-                    assert(len(row) == IMAGE_PIXEL)
-                    for j in range(IMAGE_PIXEL):
+                    
+                    for j in range(IMAGE_PIXEL_WIDTH):
                         if row[j] != ' ':
                             classifier[i][j][int(label)]['#'] += 1
                         else:
                             classifier[i][j][int(label)][' '] += 1
     
     aggregate_classifier(classifier, digits_occurences, 1, 1, False)
+    output_classifier(classifier, 5, 3)
+    output_classifier(classifier, 4, 9)
+    output_classifier(classifier, 8, 3)
+    output_classifier(classifier, 7, 9)
     aggregate_digits_priors(digits_occurences)
     return classifier, digits_occurences
                         
@@ -52,14 +71,14 @@ def aggregate_classifier(classifier, digits_occurences, m, n, isOverlapping):
     row = 0
     col = 0
     if isOverlapping:
-        row = IMAGE_PIXEL - (m - 1)
-        col = IMAGE_PIXEL - (n - 1)
+        row = IMAGE_PIXEL_HEIGHT - (m - 1)
+        col = IMAGE_PIXEL_WIDTH - (n - 1)
     else:
-        row = IMAGE_PIXEL / m
-        col = IMAGE_PIXEL / n
+        row = IMAGE_PIXEL_HEIGHT / m
+        col = IMAGE_PIXEL_WIDTH / n
     for i in range(row):
         for j in range(col):
-            for digit in range(10):
+            for digit in range(NUM):
                 if digit in classifier[i][j]:
                     for pixel in classifier[i][j][digit]:
                         #Laplacian smoothing
@@ -71,20 +90,32 @@ def aggregate_digits_priors(digits_occurences):
         digits_occurences[digit] /= 1.0 * total_occurences  
 
 def output_classifier(classifier, c1, c2):
-    pass
+    odds = [[' ' for x in range(IMAGE_PIXEL_WIDTH)] for x in range(IMAGE_PIXEL_HEIGHT)]
+    for i in range(IMAGE_PIXEL_HEIGHT):
+        for j in range(IMAGE_PIXEL_WIDTH):
+            odd = math.log10(classifier[i][j][c1]['#']) - math.log10(classifier[i][j][c2]['#'])
+            if odd > 0 and odd < 0.95:
+                odds[i][j] = '+'
+            if odd <= 0:
+                odds[i][j] = '-'
+
+    for i in range(IMAGE_PIXEL_HEIGHT):
+        _str = ""
+        for j in range(IMAGE_PIXEL_WIDTH):
+            _str += odds[i][j]
+        print(_str)
+
+    print("\n\n\n\n")
+            
         
 def test(classifier, digit_occurences):
-    output_classifier(classifier, 5, 3)
-    output_classifier(classifier, 4, 9)
-    output_classifier(classifier, 8, 3)
-    output_classifier(classifier, 7, 9)
-    confusion_matrix = [[0 for x in range(10)] for x in range(10)]
-    classification_rate = [(0, 0) for x in range(10)]
+    confusion_matrix = [[0 for x in range(NUM)] for x in range(NUM)]
+    classification_rate = [(0, 0) for x in range(NUM)]
     image_num = 0
     correct = 0
     wrong = 0
-    all_max_posterior = [(-sys.maxsize, 0) for x in range(10)]
-    all_min_posterior = [(sys.maxsize, 0) for x in range(10)]
+    all_max_posterior = [(-sys.maxsize, 0) for x in range(NUM)]
+    all_min_posterior = [(sys.maxsize, 0) for x in range(NUM)]
     with open(TEST_IMAGES) as image_fil:
         with open(TEST_LABELS) as label_fil:
             while True:
@@ -93,15 +124,15 @@ def test(classifier, digit_occurences):
                     break
                 expected = int(label)
                 posterior = {}
-                for digit in range(10):
+                for digit in range(NUM):
                     posterior[digit] = math.log10(digit_occurences[digit])
-                for i in range(IMAGE_PIXEL):
+                for i in range(IMAGE_PIXEL_HEIGHT):
                     row = image_fil.readline().strip("\n")
-                    for j in range(IMAGE_PIXEL):
+                    for j in range(IMAGE_PIXEL_WIDTH):
                         pixel = row[j]
                         if pixel == '+':
                             pixel = '#'
-                        for digit in range(10):
+                        for digit in range(NUM):
                             digit_prob = classifier[i][j][digit][pixel]
                             posterior[digit] += math.log10(digit_prob)
 
@@ -123,9 +154,9 @@ def test(classifier, digit_occurences):
                     confusion_matrix[expected][max_posterior] += 1
                     classification_rate[expected] = (classification_rate[expected][0], classification_rate[expected][1] + 1)
                 image_num += 1
-    for row in range(10):
+    for row in range(NUM):
         total_images = sum(classification_rate[row])
-        for column in range(10):
+        for column in range(NUM):
             confusion_matrix[row][column] /= 1.0 * total_images
 
     print(correct * 1.0 / (correct + wrong))
@@ -135,7 +166,7 @@ def test(classifier, digit_occurences):
     return classification_rate, confusion_matrix
 
 def print_posterior(max_posterior, min_posterior):
-    for i in range(10):
+    for i in range(NUM):
         print("Digit " + str(i) + ":")
         print("Max posterior probability: " + str(max_posterior[i][0]))
         print("Happen at line: " + str(max_posterior[i][1]))
@@ -143,7 +174,7 @@ def print_posterior(max_posterior, min_posterior):
         print("Happen at line: " + str(min_posterior[i][1]))
     
 def aggregate_classification_rate(classification_rate):
-    for digit in range(10):
+    for digit in range(NUM):
         correct = classification_rate[digit][0]
         wrong = classification_rate[digit][1]
         classification_rate[digit] = round(correct * 1.0 / (correct + wrong), 2)
@@ -181,10 +212,10 @@ def gen_next(combinations, cur_str, length):
         cur_str = cur_str[:-1]
 
 def build_image_matrix(image_fil):
-    pixel_matrix = [[' ' for x in range(IMAGE_PIXEL)] for y in range(IMAGE_PIXEL)]
-    for i in range(IMAGE_PIXEL):
+    pixel_matrix = [[' ' for x in range(IMAGE_PIXEL_WIDTH)] for y in range(IMAGE_PIXEL_HEIGHT)]
+    for i in range(IMAGE_PIXEL_HEIGHT):
         row = image_fil.readline().strip("\n")
-        for j in range(IMAGE_PIXEL):
+        for j in range(IMAGE_PIXEL_WIDTH):
             pixel = row[j]
             if pixel == '+':
                 pixel = '#'
@@ -206,12 +237,12 @@ def train_group(m, n, isOverlapping):
     classifier = [[{} for x in range(col)] for y in range(row)]
     digits_occurences = {}
 
-    for digit in range(10):
+    for digit in range(NUM):
         digits_occurences[digit] = 0
 
     for i in range(row):
         for j in range(col):
-            for digit in range(10):
+            for digit in range(NUM):
                 classifier[i][j][digit] = {}
                 for combination in generate_combinations(m, n):
                     classifier[i][j][digit][combination] = 0
@@ -249,7 +280,7 @@ def train_group(m, n, isOverlapping):
 
 def test_group(classifier, digits_occurences, m, n, isOverlapping):
     start_time = time.time()
-    classification_rate = [(0, 0) for x in range(10)]
+    classification_rate = [(0, 0) for x in range(NUM)]
     image_num = 0
     correct_count = 0.0
     wrong_count = 0.0
@@ -272,7 +303,7 @@ def test_group(classifier, digits_occurences, m, n, isOverlapping):
                 expected = int(label)
                 posterior = {}
 
-                for digit in range(10):
+                for digit in range(NUM):
                     posterior[digit] = math.log10(digits_occurences[digit])
 
                 pixel_matrix = build_image_matrix(image_fil)
@@ -286,7 +317,7 @@ def test_group(classifier, digits_occurences, m, n, isOverlapping):
                             col_pos = (j * n, j * n + n)
                         sub_matrix = [pixel_matrix[x][col_pos[0] : col_pos[1]] for x in range(row_pos[0], row_pos[1])]
                         _str = parse_matrix_to_string(sub_matrix)
-                        for digit in range(10):
+                        for digit in range(NUM):
                             digit_prob = classifier[i][j][digit][_str]
                             posterior[digit] += math.log10(digit_prob)
 
@@ -322,11 +353,11 @@ def run_overlapping_group(m, n):
     return classification_rate, train_time, test_time
         
 if __name__ == "__main__":
-    '''
     classifier, digit_occurences = train()
     classification_rate, confusion_matrix = test(classifier, digit_occurences)
     print classification_rate
     print_matrix(confusion_matrix)
+    '''
     classification_rate, train_time, test_time = run_disjoint_group(2, 2)
     print("2*2")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
@@ -354,7 +385,6 @@ if __name__ == "__main__":
     classification_rate, train_time, test_time = run_overlapping_group(4, 4)
     print("4*4")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
-    '''
     gc.collect()
     classification_rate, train_time, test_time = run_overlapping_group(2, 3)
     print("2*3")
@@ -367,4 +397,4 @@ if __name__ == "__main__":
     classification_rate, train_time, test_time = run_overlapping_group(3, 3)
     print("3*3")
     print(str(classification_rate) + " training time: " + str(train_time) + " testing time: " + str(test_time))
-
+    '''
